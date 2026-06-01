@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Encrypted Reports</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <style>
+
+/* Body & background */
+body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+    background-image: url("{{ url_for('static', filename='images/bg.jpg') }}");
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    background-attachment: fixed;
+}
+
+/* Navbar */
+nav {
+    background: #141516;
+    color: white;
+    padding: 12px 20px;
+    display: flex;
+    flex-wrap: wrap;       /* Wrap on small screens */
+    justify-content: space-between;
+    align-items: center;
+}
+
+nav .logo {
+    font-weight: bold;
+    font-size: 1.2em;
+}
+
+nav .menu {
+    display: flex;
+    flex-wrap: wrap;       /* Wrap links if too many */
+    gap: 15px;
+}
+
+nav a {
+    color: white;
+    text-decoration: none;
+    font-weight: bold;
+    padding: 5px 12px;
+    border-radius: 4px;
+    transition: background 0.3s;
+}
+
+nav a:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+/* Container */
+.container {
+    padding: 20px;
+    overflow-x: auto;             /* Horizontal scroll if table is wide */
+    max-width: 1200px;
+    margin: 20px auto;
+    background-color: rgba(255,255,255,0.85); /* Transparent for readability */
+    border-radius: 8px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.3);
+}
+
+h2 {
+    text-align: center;
+    margin-bottom: 20px;
+    color: #141516;
+}
+
+/* Table */
+table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 700px;
+}
+
+th, td {
+    padding: 10px;
+    border: 1px solid #ddd;
+    text-align: left;
+}
+
+th {
+    background: #111213;
+    color: white;
+}
+
+tr:nth-child(even) {
+    background: #f2f2f2;
+}
+
+button {
+    padding: 5px 10px;
+    cursor: pointer;
+    border: none;
+    background: #007bff;
+    color: white;
+    border-radius: 4px;
+    transition: background 0.3s;
+}
+
+button:hover {
+    background: #0056b3;
+}
+
+/* Modal */
+.modal {
+    display: none;
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: rgba(0,0,0,0.5);
+    justify-content: center;
+    align-items: center;
+}
+
+.modal-content {
+    background: white;
+    padding: 20px;
+    border-radius: 8px;
+    width: 320px;
+    text-align: center;
+}
+
+/* Responsive adjustments */
+@media(max-width:768px) {
+    nav { flex-direction: column; align-items: flex-start; }
+    nav .menu { width: 100%; justify-content: flex-start; gap: 10px; margin-top: 8px; }
+    table, thead, tbody, th, td, tr {
+        display: block;
+    }
+    tr { margin-bottom: 15px; }
+    td {
+        text-align: right;
+        padding-left: 50%;
+        position: relative;
+    }
+    td::before {
+        content: attr(data-label);
+        position: absolute;
+        left: 10px;
+        width: calc(50% - 20px);
+        font-weight: bold;
+        text-align: left;
+    }
+}
+</style>
+
+
+
+
+</head>
+<body>
+   <nav>
+    <div class="logo">Doctor Dashboard</div>
+    <div class="menu">
+        <a href="/doctor_dashboard">Home</a>
+        <a href="/doctor/view_allotted_patients">View Allotted Patients</a>
+        <a href="/doctor/view_report_enc_table">Decrypt Reports</a>
+        <a href="/logout">Logout</a>
+    </div>
+</nav>
+    <div class="container">
+        <h2>Encrypted Reports</h2>
+        <table>
+            <tr>
+                <th>Patient</th>
+                <th>Temperature</th>
+                <th>Pulse Rate</th>
+                <th>SPO2</th>
+                <th>Height</th>
+                <th>Weight</th>
+                <th>Action</th>
+            </tr>
+            {% for r in reports %}
+            <tr id="row-{{ r.report_enc_id }}">
+                <td>{{ r.patient_name }}</td>
+                <td class="temperature">{{ r.enc_temperature }}</td>
+                <td class="pulse_rate">{{ r.enc_pulse_rate }}</td>
+                <td class="spo2">{{ r.enc_spo2 }}</td>
+                <td class="height_cm">{{ r.enc_height_cm }}</td>
+                <td class="weight_kg">{{ r.enc_weight_kg }}</td>
+                <td><button class="decrypt-btn" data-id="{{ r.report_enc_id }}">Decrypt</button></td>
+            </tr>
+            {% endfor %}
+        </table>
+    </div>
+
+    <!-- Modal -->
+    <div class="modal" id="keyModal">
+        <div class="modal-content">
+            <h3>Enter Nurse Key</h3>
+            <input type="password" id="nurseKey" placeholder="Key">
+            <br><br>
+            <button id="submitKey">Decrypt</button>
+            <button id="cancelModal">Cancel</button>
+        </div>
+    </div>
+
+<script>
+let currentReportId = null;
+
+$(".decrypt-btn").click(function(){
+    currentReportId = $(this).data("id");
+    $("#keyModal").css("display","flex");
+});
+
+$("#cancelModal").click(function(){
+    $("#keyModal").hide();
+    $("#nurseKey").val("");
+});
+
+$("#submitKey").click(function(){
+    const key = $("#nurseKey").val();
+    if(!key){ alert("Enter the key"); return; }
+
+    $.ajax({
+        url: "/doctor/decrypt_report",
+        type: "POST",
+        contentType: "application/json",
+        data: JSON.stringify({report_enc_id: currentReportId, key: key}),
+        success: function(res){
+            if(res.status === "success"){
+                const row = $("#row-"+currentReportId);
+                row.find(".temperature").text(res.report.temperature);
+                row.find(".pulse_rate").text(res.report.pulse_rate);
+                row.find(".spo2").text(res.report.spo2);
+                row.find(".height_cm").text(res.report.height_cm);
+                row.find(".weight_kg").text(res.report.weight_kg);
+                $("#keyModal").hide();
+                $("#nurseKey").val("");
+            } else {
+                alert(res.msg);
+            }
+        }
+    });
+});
+</script>
+</body>
+</html>
