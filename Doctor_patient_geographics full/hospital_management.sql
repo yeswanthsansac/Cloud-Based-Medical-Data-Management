@@ -120,7 +120,7 @@ CREATE TABLE IF NOT EXISTS `nurse` (
 
 INSERT INTO `nurse` (`id`, `name`, `email`, `password`, `mobile`, `key`) VALUES
 (1, 'nurse 1', 'nurse1@gmail.com', '123', '9876542310', '123'),
-(2, 'Nurse2', 'ascentztech@gmail.com', '123', '9876542310', '171225'),
+(2, 'Nurse2', 'yashtech@gmail.com', '123', '9876542310', '171225'),
 (3, 'kishore', 'employee1@gmail.com', '123', '9876542310', '171225'),
 (5, 'admin', 'owner3@gmail.com', '123', '9876542310', '2004');
 
